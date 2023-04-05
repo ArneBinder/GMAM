@@ -239,7 +239,7 @@ class BartSeq2SeqModel(Seq2SeqModel):
                     token_cls=False, replace_pos = True,position_type=0):
         model = BartModel.from_pretrained(bart_model,use_cdn=False)
         num_tokens, _ = model.encoder.embed_tokens.weight.shape
-        model.resize_token_embeddings(len(tokenizer.unique_no_split_tokens)+num_tokens)
+        model.resize_token_embeddings(len(tokenizer))
         encoder = model.encoder
         decoder = model.decoder
 
@@ -247,20 +247,20 @@ class BartSeq2SeqModel(Seq2SeqModel):
             decoder.set_position_embedding(label_ids[0], tag_first)
 
         _tokenizer = BartTokenizer.from_pretrained(bart_model)
-        for token in tokenizer.unique_no_split_tokens:
-            if token[:2] == '<<':
-                index = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(token))
-                if len(index)>1:
-                    raise RuntimeError(f"{token} wrong split")
-                else:
-                    index = index[0]
-                assert index>=num_tokens, (index, num_tokens, token)
-                indexes = _tokenizer.convert_tokens_to_ids(_tokenizer.tokenize(token[2:-2]))
-                embed = model.encoder.embed_tokens.weight.data[indexes[0]]
-                for i in indexes[1:]:
-                    embed += model.decoder.embed_tokens.weight.data[i]
-                embed /= len(indexes)
-                model.decoder.embed_tokens.weight.data[index] = embed
+        for token in tokenizer.additional_special_tokens:
+            assert token[:2] == '<<'
+            index = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(token))
+            if len(index)>1:
+                raise RuntimeError(f"{token} wrong split")
+            else:
+                index = index[0]
+            assert index>=num_tokens, (index, num_tokens, token)
+            indexes = _tokenizer.convert_tokens_to_ids(_tokenizer.tokenize(token[2:-2]))
+            embed = model.encoder.embed_tokens.weight.data[indexes[0]]
+            for i in indexes[1:]:
+                embed += model.decoder.embed_tokens.weight.data[i]
+            embed /= len(indexes)
+            model.decoder.embed_tokens.weight.data[index] = embed
 
         encoder = FBartEncoder(encoder)
         

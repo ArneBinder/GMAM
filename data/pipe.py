@@ -121,7 +121,7 @@ class BartAMPipe_essay(Pipe):
         for tok in sorted_add_tokens:
             assert self.tokenizer.convert_tokens_to_ids([tok])[0]==self.tokenizer.unk_token_id
         #self.tokenizer.unique_no_split_tokens = unique_no_split_tokens + sorted_add_tokens
-        self.tokenizer.add_tokens(sorted_add_tokens, special_tokens=True)
+        self.tokenizer.add_special_tokens(special_tokens_dict={"additional_special_tokens": sorted_add_tokens})
         self.mapping2id = {}
         self.mapping2targetid = {}
 
