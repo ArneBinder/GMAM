@@ -237,7 +237,7 @@ class BartSeq2SeqModel(Seq2SeqModel):
     def build_model(cls, bart_model, tokenizer, label_ids, decoder_type=None, copy_gate=False,
                     use_encoder_mlp=False, use_recur_pos=False, tag_first=False,
                     token_cls=False, replace_pos = True,position_type=0):
-        model = BartModel.from_pretrained(bart_model,use_cdn=False)
+        model = BartModel.from_pretrained(bart_model)
         num_tokens, _ = model.encoder.embed_tokens.weight.shape
         model.resize_token_embeddings(len(tokenizer))
         encoder = model.encoder

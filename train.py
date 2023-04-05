@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
 
 
-    print("The number of tokens in tokenizer ", len(tokenizer.decoder))
+    print("The number of tokens in tokenizer ", len(tokenizer))
 
     bos_token_id = 0  #
     eos_token_id = 1  #
