@@ -485,7 +485,6 @@ class BartDecoder(nn.Module):
         super().__init__()
         self.dropout = config.dropout
         self.layerdrop = config.decoder_layerdrop
-        self.do_blenderbot_90_layernorm = config.do_blenderbot_90_layernorm  # layernorm variant
         self.padding_idx = embed_tokens.padding_idx
         self.max_target_positions = config.max_position_embeddings
         self.embed_scale = math.sqrt(config.d_model) if config.scale_embedding else 1.0
@@ -575,12 +574,9 @@ class BartDecoder(nn.Module):
                 pos_emb = pos_emb[:,-1:] 
 
         x = self.embed_tokens(input_ids) * self.embed_scale
-        if self.do_blenderbot_90_layernorm:
-            x = self.layernorm_embedding(x)
-            x += positions
-        else:
-            x += positions
-            x = self.layernorm_embedding(x)
+
+        x += positions
+        x = self.layernorm_embedding(x)
 
         x = F.dropout(x, p=self.dropout, training=self.training)
 
