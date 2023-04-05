@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """PyTorch BART model, ported from the fairseq repo."""
+import logging
+
 import math
 import random
 import warnings
@@ -23,10 +25,13 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn, unsafe_chunk
 from torch.nn import CrossEntropyLoss
+from transformers import BartConfig, add_start_docstrings, add_end_docstrings, PreTrainedModel
+from transformers.activations import ACT2FN
+from transformers.modeling_outputs import BaseModelOutput, BaseModelOutputWithPast, Seq2SeqModelOutput, Seq2SeqLMOutput, \
+    Seq2SeqSequenceClassifierOutput, Seq2SeqQuestionAnsweringModelOutput
+from transformers.utils import add_code_sample_docstrings, replace_return_docstrings
 
-from transformers.modeling_bart import *
-
-logger = logging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 _CONFIG_FOR_DOC = "BartConfig"
 _TOKENIZER_FOR_DOC = "BartTokenizer"
@@ -915,9 +920,9 @@ class BartModel(PretrainedBartModel):
 
         self.init_weights()
 
-    @add_start_docstrings_to_callable(BART_INPUTS_DOCSTRING)
+    #@add_start_docstrings_to_callable(BART_INPUTS_DOCSTRING)
     @add_code_sample_docstrings(
-        tokenizer_class=_TOKENIZER_FOR_DOC,
+        #tokenizer_class=_TOKENIZER_FOR_DOC,
         checkpoint="facebook/bart-large",
         output_type=Seq2SeqModelOutput,
         config_class=_CONFIG_FOR_DOC,
@@ -1027,7 +1032,13 @@ class BartModel(PretrainedBartModel):
 )
 class BartForConditionalGeneration(PretrainedBartModel):
     base_model_prefix = "model"
-    authorized_missing_keys = [r"final_logits_bias", r"encoder\.version", r"decoder\.version"]
+
+    _keys_to_ignore_on_load_missing = [
+        r"final_logits_bias",
+        r"lm_head.weight",
+        "encoder.embed_tokens.weight",
+        "decoder.embed_tokens.weight",
+    ]
 
     def __init__(self, config: BartConfig):
         super().__init__(config)
@@ -1050,7 +1061,7 @@ class BartForConditionalGeneration(PretrainedBartModel):
             new_bias = torch.cat([self.final_logits_bias, extra_bias], dim=1)
         self.register_buffer("final_logits_bias", new_bias)
 
-    @add_start_docstrings_to_callable(BART_INPUTS_DOCSTRING)
+    #@add_start_docstrings_to_callable(BART_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=Seq2SeqLMOutput, config_class=_CONFIG_FOR_DOC)
     @add_end_docstrings(BART_GENERATION_EXAMPLE)
     def forward(
@@ -1201,6 +1212,8 @@ class BartForConditionalGeneration(PretrainedBartModel):
     BART_START_DOCSTRING,
 )
 class BartForSequenceClassification(PretrainedBartModel):
+    _keys_to_ignore_on_load_missing = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
+
     def __init__(self, config: BartConfig, **kwargs):
         super().__init__(config, **kwargs)
         self.model = BartModel(config)
@@ -1213,9 +1226,9 @@ class BartForSequenceClassification(PretrainedBartModel):
         self.model._init_weights(self.classification_head.dense)
         self.model._init_weights(self.classification_head.out_proj)
 
-    @add_start_docstrings_to_callable(BART_INPUTS_DOCSTRING)
+    #@add_start_docstrings_to_callable(BART_INPUTS_DOCSTRING)
     @add_code_sample_docstrings(
-        tokenizer_class=_TOKENIZER_FOR_DOC,
+        #tokenizer_class=_TOKENIZER_FOR_DOC,
         checkpoint="facebook/bart-large",
         output_type=Seq2SeqSequenceClassifierOutput,
         config_class=_CONFIG_FOR_DOC,
@@ -1288,6 +1301,8 @@ class BartForSequenceClassification(PretrainedBartModel):
     BART_START_DOCSTRING,
 )
 class BartForQuestionAnswering(PretrainedBartModel):
+    _keys_to_ignore_on_load_missing = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -1299,9 +1314,9 @@ class BartForQuestionAnswering(PretrainedBartModel):
 
         self.model._init_weights(self.qa_outputs)
 
-    @add_start_docstrings_to_callable(BART_INPUTS_DOCSTRING)
+    #@add_start_docstrings_to_callable(BART_INPUTS_DOCSTRING)
     @add_code_sample_docstrings(
-        tokenizer_class=_TOKENIZER_FOR_DOC,
+        #tokenizer_class=_TOKENIZER_FOR_DOC,
         checkpoint="facebook/bart-large",
         output_type=Seq2SeqQuestionAnsweringModelOutput,
         config_class=_CONFIG_FOR_DOC,
