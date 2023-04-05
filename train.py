@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument('--bart_name', default='facebook/bart-base', type=str)
     parser.add_argument('--use_encoder_mlp', type=int, default=1)
     parser.add_argument('--save_model', type=int, default=0)
-    parser.add_argument('--cuda_rank', type=int, default=2)
+    parser.add_argument('--cuda_rank', type=int, default=0)
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--layernorm_decay', type=float, default=0.001)
 
