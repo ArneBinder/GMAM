@@ -2,7 +2,7 @@ from fastNLP.io import Pipe, DataBundle, Loader
 import os
 import json
 from fastNLP import DataSet, Instance
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, PreTrainedTokenizer
 import numpy as np
 from itertools import chain
 from functools import cmp_to_key
@@ -95,7 +95,7 @@ class AMLoader(Loader):
 class BartAMPipe_essay(Pipe):
     def __init__(self, tokenizer='facebook/bart-base', _first=False):
         super(BartAMPipe_essay, self).__init__()
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+        self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(tokenizer)
         self.mapping_relation = {  # so that the label word can be initialized in a better embedding.
             'supports': '<<positive>>',
             'attacks': '<<negative>>',
@@ -116,12 +116,12 @@ class BartAMPipe_essay(Pipe):
         self.cur_num_token = cur_num_tokens
 
         tokens_to_add = sorted(list(self.mapping.values()), key=lambda x:len(x), reverse=True)
-        unique_no_split_tokens = self.tokenizer.unique_no_split_tokens
+        #unique_no_split_tokens = self.tokenizer.unique_no_split_tokens
         sorted_add_tokens = sorted(list(tokens_to_add), key=lambda x:len(x), reverse=True)
         for tok in sorted_add_tokens:
             assert self.tokenizer.convert_tokens_to_ids([tok])[0]==self.tokenizer.unk_token_id
-        self.tokenizer.unique_no_split_tokens = unique_no_split_tokens + sorted_add_tokens
-        self.tokenizer.add_tokens(sorted_add_tokens)
+        #self.tokenizer.unique_no_split_tokens = unique_no_split_tokens + sorted_add_tokens
+        self.tokenizer.add_tokens(sorted_add_tokens, special_tokens=True)
         self.mapping2id = {}
         self.mapping2targetid = {}
 
