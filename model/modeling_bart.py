@@ -306,7 +306,6 @@ class BartEncoder(nn.Module):
             config.max_position_embeddings,
             embed_dim,
             self.padding_idx,
-            config.extra_pos_embeddings,
         )
         self.layers = nn.ModuleList([EncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layernorm_embedding = LayerNorm(embed_dim) if config.normalize_embedding else nn.Identity()
@@ -495,13 +494,11 @@ class BartDecoder(nn.Module):
             config.max_position_embeddings,
             config.d_model,
             self.padding_idx,
-            config.extra_pos_embeddings
         )
         self.embed_positions_replace = LearnedPositionalEmbedding(
                 config.max_position_embeddings,
                 config.d_model,
                 self.padding_idx,
-                config.extra_pos_embeddings
             )
         self.layers = nn.ModuleList(
             [DecoderLayer(config) for _ in range(config.decoder_layers)]
@@ -848,12 +845,12 @@ class LearnedPositionalEmbedding(nn.Embedding):
     position ids are passed to the forward function.
     """
 
-    def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: int, offset):
+    def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: int):
         # Bart is set up so that if padding_idx is specified then offset the embedding ids by 2
         # and adjust num_embeddings appropriately. Other models dont have this hack
-        self.offset = offset
+        self.offset = 2
         assert padding_idx is not None
-        num_embeddings += offset
+        num_embeddings += 2
         super().__init__(num_embeddings, embedding_dim, padding_idx=padding_idx)
 
     def forward(self, input_ids, use_cache=False, pos_id=False):
