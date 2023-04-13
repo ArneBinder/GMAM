@@ -164,6 +164,10 @@ if __name__ == "__main__":
     callbacks = []
     callbacks.append(GradientClipCallback(clip_value=5, clip_type='value'))
     callbacks.append(WarmupCallback(warmup=0.01, schedule='linear'))
+    # This callback (FitlogCallback) writes loss and progress to fitlog; if the Trainer has data on dev, it will automatically write the results of dev to the log; it also supports passing in
+    # one (or more) test datasets for testing (only available if the trainer has dev), and will validate on these datasets after each evaluate on dev.
+    # The validation results are also written to the fitlog. The results of these datasets are reported based on the best results on dev, i.e. if dev achieves the best at the 3rd epoch, the
+    # The results recorded in fitlog about these datasets are the results from the third epoch.
     callbacks.append(FitlogCallback(data_bundle.get_dataset('test')))
 
     sampler = None
