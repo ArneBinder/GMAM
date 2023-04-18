@@ -4,6 +4,9 @@ import os
 import argparse
 from model.utils import seed_everything
 
+
+DEBUG = False
+
 if __name__ == "__main__":
     # this work is inspired by BARTABSA https://github.com/yhcc/BARTABSA
     parser = argparse.ArgumentParser()
@@ -101,7 +104,7 @@ if __name__ == "__main__":
     @cache_results(cache_fn, _refresh=True)
     def get_data():
         pipe = BartPipe(tokenizer=bart_name, _first=_first)
-        data_bundle = pipe.process_from_file(f'./data/{dataset_name}', demo=demo)
+        data_bundle = pipe.process_from_file(f'./data/{dataset_name + ("_small" if DEBUG else "")}', demo=demo)
         return data_bundle, pipe.tokenizer, pipe.mapping2id, pipe.mapping2targetid , pipe.relation_ids, pipe.component_ids, pipe.none_ids
 
     data_bundle, tokenizer, mapping2id, mapping2targetid,relation_ids,component_ids,none_ids = get_data()
@@ -171,7 +174,7 @@ if __name__ == "__main__":
     callbacks.append(FitlogCallback(data_bundle.get_dataset('test')))
 
     sampler = None
-    sampler = BucketSampler(seq_len_field_name='src_seq_len')
+    sampler = BucketSampler(seq_len_field_name='src_seq_len', num_buckets=1 if DEBUG else 10)
     metric = Seq2SeqSpanMetric(eos_token_id, num_labels=len(label_ids),label_mapping = mapping ,_first=_first,)
 
 
