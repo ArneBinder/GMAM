@@ -3,6 +3,7 @@ sys.path.append('./')
 import os
 import argparse
 from model.utils import seed_everything
+import torch
 
 
 DEBUG = False
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     seed_everything(seed)
 
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(args.cuda_rank)
+    os.environ['CUDA_VISIBLE_DEVICES'] = "" #"'{}'.format(args.cuda_rank)
     print("cuda rank",os.environ['CUDA_VISIBLE_DEVICES'])
     #######hyper
     #######hyper
@@ -116,11 +117,16 @@ if __name__ == "__main__":
     bos_token_id = 0  #
     eos_token_id = 1  #
     label_ids = list(mapping2id.values())
+
+    if DEBUG:
+        torch.manual_seed(42)
     model = BartSeq2SeqModel.build_model(bart_name, tokenizer, label_ids=label_ids, decoder_type=decoder_type,
                                          copy_gate=False, use_encoder_mlp=use_encoder_mlp, use_recur_pos=False,
                                          replace_pos = replace_pos,position_type=position_type)
     vocab_size = len(tokenizer)
     print(vocab_size, model.decoder.decoder.embed_tokens.weight.data.size(0))
+    if DEBUG:
+        torch.manual_seed(42)
     model = SequenceGeneratorModel(model, bos_token_id=bos_token_id,
                                    eos_token_id=eos_token_id,
                                    max_length=max_len, max_len_a=max_len_a,num_beams=num_beams, do_sample=False,
