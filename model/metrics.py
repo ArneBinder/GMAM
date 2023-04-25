@@ -1,6 +1,7 @@
 import os
 import pickle as pkl
 
+import torch
 from fastNLP import MetricBase
 from fastNLP.core.metrics import _compute_f_pre_rec
 from collections import Counter
@@ -352,6 +353,8 @@ class Seq2SeqSpanMetric_essay(MetricBase):
     def _dump(self, data, prefix, directory="fixtures/metrics"):
         for k, v in data.items():
             fn = os.path.join(directory, f"metrics.{prefix}.epoch_idx={self._epoch_idx}.batch_idx={self._batch_idx}.{k}.pkl")
+            if isinstance(v, torch.Tensor):
+                v = v.to(device="cpu")
             with open(fn, "wb") as f:
                 pkl.dump(v, f)
 
