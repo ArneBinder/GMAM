@@ -1,8 +1,13 @@
+import os
+import pickle as pkl
+
 from fastNLP import MetricBase
 from fastNLP.core.metrics import _compute_f_pre_rec
 from collections import Counter
 
 import numpy as np
+
+DUMP = os.getenv("DUMP", None)
 
 
 class Seq2SeqSpanMetric_cdcp(MetricBase):
@@ -289,6 +294,8 @@ class Seq2SeqSpanMetric_essay(MetricBase):
 
         self._first = _first
 
+        self._batch_idx = 0
+        self._epoch_idx = 0
 
     def build_pair(self,tag_seq,if_skip_cross=True):
         invalid_len = 0
@@ -342,7 +349,17 @@ class Seq2SeqSpanMetric_essay(MetricBase):
         # pairs = list(set(pairs))
         return pairs,(invalid_len,invalid_order,invalid_cross,invalid_cover)
 
+    def _dump(self, data, prefix, directory="fixtures/metrics"):
+        for k, v in data.items():
+            fn = os.path.join(directory, f"metrics.{prefix}.epoch_idx={self._epoch_idx}.batch_idx={self._batch_idx}.{k}.pkl")
+            with open(fn, "wb") as f:
+                pkl.dump(v, f)
+
     def evaluate(self, target_span, pred, tgt_tokens):
+
+        if DUMP is not None:
+            self._dump(data={"target_span": target_span, "pred": pred, "tgt_tokens": tgt_tokens}, prefix="evaluate")
+
         self.total += pred.size(0)
 
         pred_eos_index = pred.flip(dims=[1]).eq(self.eos_token_id).cumsum(dim=1).long()
@@ -428,7 +445,8 @@ class Seq2SeqSpanMetric_essay(MetricBase):
 
             self.triple_fn += len(ts)
             
-        
+
+        self._batch_idx += 1
         
         return pred_spans
 
@@ -462,6 +480,10 @@ class Seq2SeqSpanMetric_essay(MetricBase):
         res['invalid_order'] = round(self.invalid_order / self.total, 4)
         res['invalid_cross'] = round(self.invalid_cross / self.total, 4)
         res['invalid_cover'] = round(self.invalid_cover / self.total, 4)
+
+        if DUMP is not None:
+            self._dump(data={self.get_metric_name(): res}, prefix="get_metric")
+
         if reset:
             self.component_metric.reset()
             self.triple_fp = 0
@@ -476,6 +498,9 @@ class Seq2SeqSpanMetric_essay(MetricBase):
             self.am_component_fn = 0
             
             self.invalid_len,self.invalid_order,self.invalid_cross,self.invalid_cover=0,0,0,0
+
+            self._batch_idx = 0
+            self._epoch_idx += 1
         return res
 
 
