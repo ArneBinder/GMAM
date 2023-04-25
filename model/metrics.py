@@ -351,10 +351,9 @@ class Seq2SeqSpanMetric_essay(MetricBase):
         return pairs,(invalid_len,invalid_order,invalid_cross,invalid_cover)
 
     def _dump(self, data, prefix, directory="fixtures/metrics"):
+        os.makedirs(directory, exist_ok=True)
         for k, v in data.items():
             fn = os.path.join(directory, f"metrics.{prefix}.epoch_idx={self._epoch_idx}.batch_idx={self._batch_idx}.{k}.pkl")
-            dir_name = os.path.dirname(fn)
-            os.makedirs(dir_name, exist_ok=True)
             if isinstance(v, torch.Tensor):
                 v = v.to(device="cpu")
             with open(fn, "wb") as f:
