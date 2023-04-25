@@ -350,10 +350,12 @@ class Seq2SeqSpanMetric_essay(MetricBase):
         # pairs = list(set(pairs))
         return pairs,(invalid_len,invalid_order,invalid_cross,invalid_cover)
 
-    def _dump(self, data, fn_prefix, directory):
+    def _dump(self, data, fn_prefix, directory, metadata):
+        for k, v in metadata.items():
+            fn_prefix += f".{k}={v}"
         os.makedirs(directory, exist_ok=True)
         for k, v in data.items():
-            fn = os.path.join(directory, f"{fn_prefix}.epoch_idx={self._epoch_idx}.batch_idx={self._batch_idx}.{k}.pkl")
+            fn = os.path.join(directory, f"{fn_prefix}.{k}.pkl")
             if isinstance(v, torch.Tensor):
                 v = v.to(device="cpu")
             with open(fn, "wb") as f:
@@ -365,7 +367,8 @@ class Seq2SeqSpanMetric_essay(MetricBase):
             self._dump(
                 data={"target_span": target_span, "pred": pred, "tgt_tokens": tgt_tokens},
                 fn_prefix="evaluate",
-                directory="fixtures/metrics"
+                directory="fixtures/metrics",
+                metadata={"epoch_idx": self._epoch_idx, "batch_idx": self._batch_idx},
             )
 
         self.total += pred.size(0)
@@ -490,7 +493,12 @@ class Seq2SeqSpanMetric_essay(MetricBase):
         res['invalid_cover'] = round(self.invalid_cover / self.total, 4)
 
         if DUMP is not None:
-            self._dump(data={self.get_metric_name(): res}, fn_prefix="get_metric", directory="fixtures/metrics")
+            self._dump(
+                data={self.get_metric_name(): res},
+                fn_prefix="get_metric",
+                directory="fixtures/metrics",
+                metadata={"epoch_idx": self._epoch_idx, "batch_idx": self._batch_idx},
+            )
 
         if reset:
             self.component_metric.reset()
