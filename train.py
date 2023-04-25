@@ -6,7 +6,7 @@ from model.utils import seed_everything
 import torch
 
 
-DEBUG = False
+DEBUG = os.getenv("DEBUG", None)
 
 if __name__ == "__main__":
     # this work is inspired by BARTABSA https://github.com/yhcc/BARTABSA
@@ -56,7 +56,10 @@ if __name__ == "__main__":
     seed_everything(seed)
 
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = "" #"'{}'.format(args.cuda_rank)
+    if DEBUG is not None:
+        os.environ['CUDA_VISIBLE_DEVICES'] = ""
+    else:
+        os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(args.cuda_rank)
     print("cuda rank",os.environ['CUDA_VISIBLE_DEVICES'])
     #######hyper
     #######hyper
@@ -105,7 +108,7 @@ if __name__ == "__main__":
     @cache_results(cache_fn, _refresh=True)
     def get_data():
         pipe = BartPipe(tokenizer=bart_name, _first=_first)
-        data_bundle = pipe.process_from_file(f'./data/{dataset_name + ("_small" if DEBUG else "")}', demo=demo)
+        data_bundle = pipe.process_from_file(f'./data/{dataset_name + ("_small" if DEBUG is not None else "")}', demo=demo)
         return data_bundle, pipe.tokenizer, pipe.mapping2id, pipe.mapping2targetid , pipe.relation_ids, pipe.component_ids, pipe.none_ids
 
     data_bundle, tokenizer, mapping2id, mapping2targetid,relation_ids,component_ids,none_ids = get_data()
@@ -118,7 +121,7 @@ if __name__ == "__main__":
     eos_token_id = 1  #
     label_ids = list(mapping2id.values())
 
-    if DEBUG:
+    if DEBUG is not None:
         torch.manual_seed(42)
     model = BartSeq2SeqModel.build_model(bart_name, tokenizer, label_ids=label_ids, decoder_type=decoder_type,
                                          copy_gate=False, use_encoder_mlp=use_encoder_mlp, use_recur_pos=False,
