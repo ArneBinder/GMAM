@@ -103,7 +103,7 @@ if __name__ == "__main__":
         from data.pipe import BartAMPipe_cdcp as BartPipe
         from model.metrics import Seq2SeqSpanMetric_cdcp as Seq2SeqSpanMetric
 
-    @cache_results(cache_fn, _refresh=True)
+    #@cache_results(cache_fn, _refresh=True)
     def get_data():
         pipe = BartPipe(tokenizer=bart_name, _first=_first)
         data_bundle = pipe.process_from_file(f'./data/{dataset_name + ("_small" if DEBUG is not None else "")}', demo=demo)
