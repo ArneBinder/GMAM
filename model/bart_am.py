@@ -1,3 +1,9 @@
+import os
+import pickle as pkl
+import json
+from pathlib import Path
+from typing import Union
+
 import torch
 from .modeling_bart import BartEncoder, BartDecoder, BartModel
 from transformers import BartTokenizer
@@ -7,6 +13,30 @@ import torch.nn.functional as F
 from fastNLP.models import Seq2SeqModel
 from torch import device, nn
 import numpy as np
+
+DEBUG = os.getenv("DEBUG", None)
+FIXTURE_DIR = Path("fixture_data", "model", "bart_am")
+
+
+def check_or_dump_fixture_data(obj, path: Union[str, Path]):
+    if isinstance(path, Path):
+        path = str(path)
+    if isinstance(obj, torch.Tensor):
+        path = path + '.bin'
+        if os.path.exists(path):
+            obj_ = torch.load(path)
+            print(f"checking tensor {path}")
+            try:
+                torch.testing.assert_allclose(obj, obj_, msg=f"tensor {path} not equal")
+            except AssertionError as e:
+                raise e
+        else:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            print(f"dumping tensor to {path}")
+            torch.save(obj, path)
+    else:
+        raise ValueError(f"Unknown type {type(obj)}")
+
 
 class FBartEncoder(Seq2SeqEncoder):
     def __init__(self, encoder):
@@ -233,13 +263,19 @@ class CaGFBartDecoder(FBartDecoder):
 
 
 class BartSeq2SeqModel(Seq2SeqModel):
+
+    def __init__(self, encoder: Seq2SeqEncoder, decoder: Seq2SeqDecoder):
+        super().__init__(encoder, decoder)
+        self._step = 0
+
     @classmethod
     def build_model(cls, bart_model, tokenizer, label_ids, decoder_type=None, copy_gate=False,
                     use_encoder_mlp=False, use_recur_pos=False, tag_first=False,
                     token_cls=False, replace_pos = True,position_type=0):
+        #model = BartModel.from_pretrained(bart_model,use_cdn=False)
         model = BartModel.from_pretrained(bart_model)
         num_tokens, _ = model.encoder.embed_tokens.weight.shape
-        model.resize_token_embeddings(len(tokenizer))
+        model.resize_token_embeddings(len(tokenizer.unique_no_split_tokens)+num_tokens)
         encoder = model.encoder
         decoder = model.decoder
 
@@ -247,20 +283,20 @@ class BartSeq2SeqModel(Seq2SeqModel):
             decoder.set_position_embedding(label_ids[0], tag_first)
 
         _tokenizer = BartTokenizer.from_pretrained(bart_model)
-        for token in tokenizer.additional_special_tokens:
-            assert token[:2] == '<<'
-            index = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(token))
-            if len(index)>1:
-                raise RuntimeError(f"{token} wrong split")
-            else:
-                index = index[0]
-            assert index>=num_tokens, (index, num_tokens, token)
-            indexes = _tokenizer.convert_tokens_to_ids(_tokenizer.tokenize(token[2:-2]))
-            embed = model.encoder.embed_tokens.weight.data[indexes[0]]
-            for i in indexes[1:]:
-                embed += model.decoder.embed_tokens.weight.data[i]
-            embed /= len(indexes)
-            model.decoder.embed_tokens.weight.data[index] = embed
+        for token in tokenizer.unique_no_split_tokens:
+            if token[:2] == '<<':
+                index = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(token))
+                if len(index)>1:
+                    raise RuntimeError(f"{token} wrong split")
+                else:
+                    index = index[0]
+                assert index>=num_tokens, (index, num_tokens, token)
+                indexes = _tokenizer.convert_tokens_to_ids(_tokenizer.tokenize(token[2:-2]))
+                embed = model.encoder.embed_tokens.weight.data[indexes[0]]
+                for i in indexes[1:]:
+                    embed += model.decoder.embed_tokens.weight.data[i]
+                embed /= len(indexes)
+                model.decoder.embed_tokens.weight.data[index] = embed
 
         encoder = FBartEncoder(encoder)
         
@@ -297,6 +333,23 @@ class BartSeq2SeqModel(Seq2SeqModel):
         """
         state = self.prepare_state(src_tokens, src_seq_len, first)
         decoder_output = self.decoder(tokens = tgt_tokens, state = state, CPM_tag = CPM_tag)
+        if DEBUG:
+            if self.training:
+                check_or_dump_fixture_data(src_tokens, path=str(FIXTURE_DIR / f"forward.step={self._step}.inputs.src_tokens"))
+                check_or_dump_fixture_data(tgt_tokens, path=str(FIXTURE_DIR / f"forward.step={self._step}.inputs.tgt_tokens"))
+                check_or_dump_fixture_data(CPM_tag, path=str(FIXTURE_DIR / f"forward.step={self._step}.inputs.CPM_tag"))
+
+                check_or_dump_fixture_data(state.encoder_mask, path=str(FIXTURE_DIR / f"forward.step={self._step}.outputs.state.encoder_mask"))
+                #check_or_dump_fixture_data(state.encoder_output, path=str(FIXTURE_DIR / f"forward.step={self._step}.outputs.state.encoder_output"))
+                #check_or_dump_fixture_data(state.src_embed_outputs, path=str(FIXTURE_DIR / f"forward.step={self._step}.outputs.state.src_embed_outputs"))
+                check_or_dump_fixture_data(state.src_tokens, path=str(FIXTURE_DIR / f"forward.step={self._step}.outputs.state.src_tokens"))
+
+                # decoder_outputs: logits, (constrain_logits, constrain_tag)
+                #check_or_dump_fixture_data(decoder_output[0], path=str(FIXTURE_DIR / f"forward.step={self._step}.outputs.decoder_output.logits"))
+                #check_or_dump_fixture_data(decoder_output[1][0], path=str(FIXTURE_DIR / f"forward.step={self._step}.outputs.decoder_output.constrain_logits"))
+                #check_or_dump_fixture_data(decoder_output[1][1], path=str(FIXTURE_DIR / f"forward.step={self._step}.outputs.decoder_output.constrain_tag"))
+
+        self._step += 1
         if isinstance(decoder_output, torch.Tensor):
             return {'pred': decoder_output}
         elif isinstance(decoder_output, (tuple, list)):

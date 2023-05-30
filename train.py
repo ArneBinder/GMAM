@@ -3,8 +3,6 @@ sys.path.append('./')
 import os
 import argparse
 from model.utils import seed_everything
-import torch
-
 
 DEBUG = os.getenv("DEBUG", None)
 
@@ -13,18 +11,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # parser.add_argument('--dataset_name', default='cdcp', type=str)
     parser.add_argument('--dataset_name', default='essay', type=str)
-    parser.add_argument('--lr', default=5e-5, type=float)
+    parser.add_argument('--lr', default=6e-5, type=float)
     parser.add_argument('--batch_size', default=32, type=int)
     parser.add_argument('--num_beams', default=4, type=int)
-    parser.add_argument('--n_epochs', default=75, type=int)
+    parser.add_argument('--n_epochs', default=75 if DEBUG is None else 0, type=int)
     parser.add_argument('--decoder_type', default='avg_score', type=str, choices=['None', 'avg_score'])
     parser.add_argument('--length_penalty', default=1.0, type=float)
+    #parser.add_argument('--bart_name', default='/data/heyuhang/pretrain_model/bart-base', type=str)
     parser.add_argument('--bart_name', default='facebook/bart-base', type=str)
     parser.add_argument('--use_encoder_mlp', type=int, default=1)
-    parser.add_argument('--save_model', type=int, default=0)
+    parser.add_argument('--save_model', type=int, default=1)
     parser.add_argument('--cuda_rank', type=int, default=0)
     parser.add_argument('--seed', type=int, default=None)
-    parser.add_argument('--layernorm_decay', type=float, default=0.001)
+    parser.add_argument('--layernorm_decay', type=float, default=0.005)
 
     parser.add_argument('--biloss', action='store_true', default=True)
     parser.add_argument('--replace_pos', action='store_true', default=True)
@@ -54,7 +53,6 @@ if __name__ == "__main__":
     position_type = args.position_type
     layernorm_decay = args.layernorm_decay
     seed_everything(seed)
-
 
     if DEBUG is not None:
         os.environ['CUDA_VISIBLE_DEVICES'] = ""
@@ -115,21 +113,20 @@ if __name__ == "__main__":
 
 
 
-    print("The number of tokens in tokenizer ", len(tokenizer))
+    print("The number of tokens in tokenizer ", len(tokenizer.decoder))
 
     bos_token_id = 0  #
     eos_token_id = 1  #
     label_ids = list(mapping2id.values())
-
     if DEBUG is not None:
-        torch.manual_seed(42)
+        seed_everything(seed)
     model = BartSeq2SeqModel.build_model(bart_name, tokenizer, label_ids=label_ids, decoder_type=decoder_type,
                                          copy_gate=False, use_encoder_mlp=use_encoder_mlp, use_recur_pos=False,
                                          replace_pos = replace_pos,position_type=position_type)
     vocab_size = len(tokenizer)
     print(vocab_size, model.decoder.decoder.embed_tokens.weight.data.size(0))
-    if DEBUG:
-        torch.manual_seed(42)
+    if DEBUG is not None:
+        seed_everything(seed)
     model = SequenceGeneratorModel(model, bos_token_id=bos_token_id,
                                    eos_token_id=eos_token_id,
                                    max_length=max_len, max_len_a=max_len_a,num_beams=num_beams, do_sample=False,
@@ -176,10 +173,6 @@ if __name__ == "__main__":
     callbacks = []
     callbacks.append(GradientClipCallback(clip_value=5, clip_type='value'))
     callbacks.append(WarmupCallback(warmup=0.01, schedule='linear'))
-    # This callback (FitlogCallback) writes loss and progress to fitlog; if the Trainer has data on dev, it will automatically write the results of dev to the log; it also supports passing in
-    # one (or more) test datasets for testing (only available if the trainer has dev), and will validate on these datasets after each evaluate on dev.
-    # The validation results are also written to the fitlog. The results of these datasets are reported based on the best results on dev, i.e. if dev achieves the best at the 3rd epoch, the
-    # The results recorded in fitlog about these datasets are the results from the third epoch.
     callbacks.append(FitlogCallback(data_bundle.get_dataset('test')))
 
     sampler = None
