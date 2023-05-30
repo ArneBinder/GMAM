@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """PyTorch BART model, ported from the fairseq repo."""
+import logging
+
 import math
 import random
 import warnings
@@ -23,11 +25,13 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn, unsafe_chunk
 from torch.nn import CrossEntropyLoss
+from transformers import BartConfig, add_start_docstrings, add_end_docstrings, PreTrainedModel
+from transformers.activations import ACT2FN
+from transformers.file_utils import add_code_sample_docstrings, replace_return_docstrings
+from transformers.modeling_outputs import BaseModelOutput, BaseModelOutputWithPast, Seq2SeqModelOutput, Seq2SeqLMOutput, \
+    Seq2SeqSequenceClassifierOutput, Seq2SeqQuestionAnsweringModelOutput
 
-from transformers.modeling_bart import *
-from transformers.modeling_outputs import BaseModelOutputWithPast
-
-logger = logging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 _CONFIG_FOR_DOC = "BartConfig"
 _TOKENIZER_FOR_DOC = "BartTokenizer"

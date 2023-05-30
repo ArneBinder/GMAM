@@ -95,7 +95,7 @@ class AMLoader(Loader):
 class BartAMPipe_essay(Pipe):
     def __init__(self, tokenizer='facebook/bart-base', _first=False):
         super(BartAMPipe_essay, self).__init__()
-        self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(tokenizer, add_prefix_space=True)
+        self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(tokenizer, add_prefix_space=True, use_fast=False)
         self.mapping_relation = {  # so that the label word can be initialized in a better embedding.
             'supports': '<<positive>>',
             'attacks': '<<negative>>',
@@ -256,7 +256,7 @@ class BartAMPipe_essay(Pipe):
 class BartAMPipe_cdcp(Pipe):
     def __init__(self, tokenizer='facebook/bart-base', _first=False):
         super(BartAMPipe_cdcp, self).__init__()
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer, add_prefix_space=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer, add_prefix_space=True, use_fast=False)
         self.mapping_relation = {  # so that the label word can be initialized in a better embedding.
             'evidence': '<<positive>>',
             'reason': '<<negative>>',
