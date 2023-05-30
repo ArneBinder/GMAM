@@ -275,8 +275,9 @@ class BartSeq2SeqModel(Seq2SeqModel):
         #model = BartModel.from_pretrained(bart_model,use_cdn=False)
         model = BartModel.from_pretrained(bart_model)
         num_tokens, _ = model.encoder.embed_tokens.weight.shape
-        # TODO: this should be len(tokenizer) in later version
-        num_total_tokens = len(tokenizer.unique_no_split_tokens)+num_tokens
+        #num_total_tokens = len(tokenizer.unique_no_split_tokens)+num_tokens
+        # TODO: the +5 is quite random...
+        num_total_tokens = len(tokenizer) + 5
         # TODO: remove after verification
         assert num_total_tokens == 50276
         model.resize_token_embeddings(num_total_tokens)
