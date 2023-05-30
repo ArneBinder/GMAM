@@ -275,7 +275,11 @@ class BartSeq2SeqModel(Seq2SeqModel):
         #model = BartModel.from_pretrained(bart_model,use_cdn=False)
         model = BartModel.from_pretrained(bart_model)
         num_tokens, _ = model.encoder.embed_tokens.weight.shape
-        model.resize_token_embeddings(len(tokenizer.unique_no_split_tokens)+num_tokens)
+        # TODO: this should be len(tokenizer) in later version
+        num_total_tokens = len(tokenizer.unique_no_split_tokens)+num_tokens
+        # TODO: remove after verification
+        assert num_total_tokens == 50276
+        model.resize_token_embeddings(num_total_tokens)
         encoder = model.encoder
         decoder = model.decoder
 
@@ -283,7 +287,7 @@ class BartSeq2SeqModel(Seq2SeqModel):
             decoder.set_position_embedding(label_ids[0], tag_first)
 
         _tokenizer = BartTokenizer.from_pretrained(bart_model)
-        for token in tokenizer.unique_no_split_tokens:
+        for token in tokenizer.additional_special_tokens:
             if token[:2] == '<<':
                 index = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(token))
                 if len(index)>1:
